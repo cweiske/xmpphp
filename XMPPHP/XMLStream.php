@@ -558,20 +558,16 @@ class XMLStream
      */
     public function addXPathHandler(string $xpath, string $pointer, ?string $obj = null): void
     {
-        if (preg_match_all("/\(?{[^\}]+}\)?(\/?)[^\/]+/", $xpath, $regs)) {
-            $ns_tags = $regs[0];
+        if (preg_match_all('/\/?(\{[^\}]+\})?[^\/]+/', $xpath, $regs)) {
+            $tag = $regs[0];
         } else {
-            $ns_tags = [$xpath];
+            $tag = [$xpath];
         }
         $xpath_array = [];
-        foreach ($ns_tags as $ns_tag) {
-            list($l, $r) = explode("}", $ns_tag);
-            if ($r != null) {
-                $xpart = [substr($l, 1), $r];
-            } else {
-                $xpart = [null, $l];
-            }
-            $xpath_array[] = $xpart;
+        foreach ($tag as $t) {
+            $t = ltrim($t, '/');
+            preg_match('/(\{([^\}]+)\})?(.*)/', $t, $regs);
+            $xpath_array[] = [$regs[2], $regs[3]];
         }
         $this->xpathhandlers[] = [$xpath_array, $pointer, $obj];
     }
