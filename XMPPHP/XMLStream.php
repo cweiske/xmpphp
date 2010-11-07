@@ -429,7 +429,7 @@ class XMPPHP_XMLStream {
 	{
 		$remaining = $maximum;
 		
-		do {
+		if (NULL !== $this->socket) do {
 			$starttime = (microtime(true) * 1000000);
 			$read = array($this->socket);
 			$write = array();
@@ -444,7 +444,7 @@ class XMPPHP_XMLStream {
 				$usecs = $remaining % 1000000;
 				$secs = floor(($remaining - $usecs) / 1000000);
 			}
-			$updated = @stream_select($read, $write, $except, $secs, $usecs);
+			$updated = stream_select($read, $write, $except, $secs, $usecs);
 			if ($updated === false) {
 				$this->log->log("Error on stream_select()",  XMPPHP_Log::LEVEL_VERBOSE);				
 				if ($this->reconnect) {
