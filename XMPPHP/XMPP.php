@@ -86,7 +86,7 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	/**
 	 * @var boolean
 	 */
-	protected $use_encryption = true;
+	protected $use_encryption = false;
 	
 	/**
 	 * @var boolean
@@ -137,6 +137,11 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 
 		$this->roster = new Roster();
 		$this->track_presence = true;
+
+		$transports = stream_get_transports();
+		$transports = array_flip($transports);
+		if (isset($transports['sslv2']) || isset($transports['sslv3']))
+			$this->use_encryption = true;
 
 		$this->stream_start = '<stream:stream to="' . $server . '" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0">';
 		$this->stream_end   = '</stream:stream>';
