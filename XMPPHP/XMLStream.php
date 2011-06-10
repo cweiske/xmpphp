@@ -27,13 +27,13 @@
  */
 
 /** XMPPHP_Exception */
-require_once 'XMPPHP/Exception.php';
+require_once dirname(__FILE__) . '/Exception.php';
 
 /** XMPPHP_XMLObj */
-require_once 'XMPPHP/XMLObj.php';
+require_once dirname(__FILE__) . '/XMLObj.php';
 
 /** XMPPHP_Log */
-require_once 'XMPPHP/Log.php';
+require_once dirname(__FILE__) . '/Log.php';
 
 /**
  * XMPPHP XML Stream
@@ -263,7 +263,7 @@ class XMPPHP_XMLStream {
 			$ns_tags = array($xpath);
 		}
 		foreach($ns_tags as $ns_tag) {
-			list($l, $r) = explode('}', $ns_tag);
+			list($l, $r) = split("}", $ns_tag);
 			if ($r != null) {
 				$xpart = array(substr($l, 1), $r);
 			} else {
@@ -288,12 +288,9 @@ class XMPPHP_XMLStream {
 	/**
 	 * Connect to XMPP Host
 	 *
-	 * @param integer $timeout    Timeout in seconds
+	 * @param integer $timeout
 	 * @param boolean $persistent
-	 * @param boolean $sendinit   Send XMPP starting sequence after connect
-	 *                            automatically
-	 *
-	 * @throws XMPPHP_Exception When the connection fails
+	 * @param boolean $sendinit
 	 */
 	public function connect($timeout = 30, $persistent = false, $sendinit = true) {
 		$this->sent_disconnect = false;
@@ -333,10 +330,6 @@ class XMPPHP_XMLStream {
 
 	/**
 	 * Reconnect XMPP Host
-	 *
-	 * @throws XMPPHP_Exception When the connection fails
-	 * @uses   $reconnectTimeout
-	 * @see    setReconnectTimeout()
 	 */
 	public function doReconnect() {
 		if(!$this->is_server) {
@@ -376,59 +369,17 @@ class XMPPHP_XMLStream {
 	}
 
 	/**
-	 * Checks if the given string is closed with the same tag as it is
-	 * opened. We try to be as fast as possible here.
-	 *
-	 * @param string $buff Read buffer of __process()
-	 *
-	 * @return boolean true if the buffer seems to be complete
-	 */
-	protected function bufferComplete($buff)
-	{
-		if (substr($buff, -1) != '>') {
-			return false;
-		}
-		//we always have a space since the namespace needs to be
-		//declared. could be a tab, though
-		$start = substr(
-			$buff, 1,
-			min(strpos($buff, '>', 2), strpos($buff, ' ', 2)) - 1
-		);
-		$stop  = substr($buff, -strlen($start) - 3);
-
-		if ($start == '?xml') {
-			//starting with an xml tag. this means a stream is being
-			// opened, which is not much of data, so no fear it's
-			// not complete
-			return true;
-		}
-		if (substr($stop, -2) == '/>') {
-			//one tag, i.e. <success />
-			return true;
-		}
-		if ('</' . $start . '>' == $stop) {
-			return true;
-		}
-
-		return false;
-	}
-
-	/**
 	 * Core reading tool
-	 *
-	 * @param mixed   $maximum Limit when to return
-	 *                         - 0: only read if data is immediately ready
-	 *                         - NULL: wait forever and ever
-	 *                         - integer: process for this amount of microseconds
-	 * @param boolean $return_when_received Immediately return when data have been
-	 *                                      received
-	 *
-	 * @return boolean True when all goes well, false when something fails
+	 * 0 -> only read if data is immediately ready
+	 * NULL -> wait forever and ever
+	 * integer -> process for this amount of time 
 	 */
-	private function __process($maximum = 5, $return_when_received = false)
-	{
-		$remaining = $maximum;
+	
+	private function __process($maximum=5) {
 		
+		$remaining = $maximum;
+    if (NULL === $this->socket)
+      return false;
 		do {
 			$starttime = (microtime(true) * 1000000);
 			$read = array($this->socket);
@@ -444,7 +395,7 @@ class XMPPHP_XMLStream {
 				$usecs = $remaining % 1000000;
 				$secs = floor(($remaining - $usecs) / 1000000);
 			}
-			$updated = @stream_select($read, $write, $except, $secs, $usecs);
+			$updated = stream_select($read, $write, $except, $secs, $usecs);
 			if ($updated === false) {
 				$this->log->log("Error on stream_select()",  XMPPHP_Log::LEVEL_VERBOSE);				
 				if ($this->reconnect) {
@@ -455,33 +406,19 @@ class XMPPHP_XMLStream {
 					return false;
 				}
 			} else if ($updated > 0) {
-				$buff = '';
-				do {
-					if ($buff != '') {
-						//disable blocking for now because fread() will
-						// block until the 4k are full if we already
-						// read a part of the packet
-						stream_set_blocking($this->socket, 0);
+				# XXX: Is this big enough?
+				$buff = @fread($this->socket, 4096);
+				if(!$buff) { 
+					if($this->reconnect) {
+						$this->doReconnect();
+					} else {
+						fclose($this->socket);
+						$this->socket = NULL;
+						return false;
 					}
-					$part = fread($this->socket, 4096);
-					stream_set_blocking($this->socket, 1);
-					if ($part === false) {
-						if($this->reconnect) {
-							$this->doReconnect();
-						} else {
-							fclose($this->socket);
-							$this->socket = NULL;
-							return false;
-						}
-					}
-					$this->log->log("RECV: $part",  XMPPHP_Log::LEVEL_VERBOSE);
-					$buff .= $part;
-				} while (!$this->bufferComplete($buff));
-
-				xml_parse($this->parser, $buff, false);
-				if ($return_when_received) {
-					return true;
 				}
+				$this->log->log("RECV: $buff",  XMPPHP_Log::LEVEL_VERBOSE);
+				xml_parse($this->parser, $buff, false);
 			} else {
 				# $updated == 0 means no changes during timeout.
 			}
@@ -504,11 +441,8 @@ class XMPPHP_XMLStream {
 	/**
 	 * Process until a timeout occurs
 	 *
-	 * @param integer $timeout Time in seconds
-	 *
+	 * @param integer $timeout
 	 * @return string
-	 *
-	 * @see __process()
 	 */
 	public function processTime($timeout=NULL) {
 		if (is_null($timeout)) {
@@ -521,39 +455,23 @@ class XMPPHP_XMLStream {
 	/**
 	 * Process until a specified event or a timeout occurs
 	 *
-	 * @param string|array $event   Event name or array of event names
-	 * @param integer      $timeout Timeout in seconds
-	 *
-	 * @return array Payload
+	 * @param string|array $event
+	 * @param integer $timeout
+	 * @return string
 	 */
-	public function processUntil($event, $timeout = -1)
-	{
+	public function processUntil($event, $timeout=-1) {
 		$start = time();
-		if (!is_array($event)) {
-			$event = array($event);
-		}
-
+		if(!is_array($event)) $event = array($event);
 		$this->until[] = $event;
 		end($this->until);
 		$event_key = key($this->until);
 		reset($this->until);
-
 		$this->until_count[$event_key] = 0;
 		$updated = '';
-		while (!$this->disconnected
-			&& $this->until_count[$event_key] < 1
-			&& ($timeout == -1 || time() - $start < $timeout)
-		) {
-			$maximum = $timeout == -1
-				? NULL
-				: ($timeout - (time() - $start)) * 1000000;
-			$ret = $this->__process($maximum, true);
-			if (!$ret) {
-				break;
-			}
+		while(!$this->disconnected and $this->until_count[$event_key] < 1 and (time() - $start < $timeout or $timeout == -1)) {
+			$this->__process();
 		}
-
-		if (array_key_exists($event_key, $this->until_payload)) {
+		if(array_key_exists($event_key, $this->until_payload)) {
 			$payload = $this->until_payload[$event_key];
 			unset($this->until_payload[$event_key]);
 			unset($this->until_count[$event_key]);
@@ -561,7 +479,6 @@ class XMPPHP_XMLStream {
 		} else {
 			$payload = array();
 		}
-
 		return $payload;
 	}
 
