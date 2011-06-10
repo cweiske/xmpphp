@@ -115,7 +115,7 @@ class XMPPHP_XMLObj {
 		foreach($this->attrs as $key => $value) {
 			if($key != 'xmlns') {
 				$value = htmlspecialchars($value);
-				$str .= "$key='$value' ";
+				$str .= "$key=\"$value\" ";
 			}
 		}
 		$str .= ">";
