@@ -27,13 +27,13 @@
  */
 
 /** XMPPHP_Exception */
-require_once 'XMPPHP/Exception.php';
+require_once dirname(__FILE__) . '/Exception.php';
 
 /** XMPPHP_XMLObj */
-require_once 'XMPPHP/XMLObj.php';
+require_once dirname(__FILE__) . '/XMLObj.php';
 
 /** XMPPHP_Log */
-require_once 'XMPPHP/Log.php';
+require_once dirname(__FILE__) . '/Log.php';
 
 /**
  * XMPPHP XML Stream
@@ -396,7 +396,7 @@ class XMPPHP_XMLStream {
 		);
 		$stop  = substr($buff, -strlen($start) - 3);
 
-		if ($start == '?xml') {
+		if ($start == '?xml' || substr($start,-6) == 'stream' ) {
 			//starting with an xml tag. this means a stream is being
 			// opened, which is not much of data, so no fear it's
 			// not complete
@@ -425,12 +425,12 @@ class XMPPHP_XMLStream {
 	 *
 	 * @return boolean True when all goes well, false when something fails
 	 */
-	private function __process($maximum = 5, $return_when_received = false)
+	protected function __process($maximum = 5, $return_when_received = false)
 	{
 		$remaining = $maximum;
-		
+		$starttime = (microtime(true) * 1000000);		
 		do {
-			$starttime = (microtime(true) * 1000000);
+
 			$read = array($this->socket);
 			$write = array();
 			$except = array();
@@ -474,13 +474,22 @@ class XMPPHP_XMLStream {
 							return false;
 						}
 					}
-					$this->log->log("RECV: $part",  XMPPHP_Log::LEVEL_VERBOSE);
+					// just to avoid a lot of blank fread result
+					if($part!='')
+						$this->log->log("RECV: $part",  XMPPHP_Log::LEVEL_VERBOSE);
 					$buff .= $part;
-				} while (!$this->bufferComplete($buff));
 
-				xml_parse($this->parser, $buff, false);
-				if ($return_when_received) {
-					return true;
+					$endtime = (microtime(true)*1000000);
+					$time_past = $endtime - $starttime;
+					$remaining = $remaining - $time_past;
+
+				} while ( (is_null($maximum) || $remaining > 0) && !$this->bufferComplete($buff) );
+
+				if(trim($buff) != ''){
+					xml_parse($this->parser, $buff, false);
+					if ($return_when_received) {
+						return true;
+					}
 				}
 			} else {
 				# $updated == 0 means no changes during timeout.
@@ -488,6 +497,7 @@ class XMPPHP_XMLStream {
 			$endtime = (microtime(true)*1000000);
 			$time_past = $endtime - $starttime;
 			$remaining = $remaining - $time_past;
+
 		} while (is_null($maximum) || $remaining > 0);
 		return true;
 	}
@@ -515,6 +525,23 @@ class XMPPHP_XMLStream {
 			return $this->__process(NULL);
 		} else {
 			return $this->__process($timeout * 1000000);
+		}
+	}
+	
+	/**
+	 * Process until next event or a timeout occurs
+	 *
+	 * @param integer $timeout Time in seconds
+	 *
+	 * @return string
+	 *
+	 * @see __process()
+	 */
+	public function processUntilNext($timeout=NULL) {
+		if (is_null($timeout)) {
+			return $this->__process(NULL, TRUE);
+		} else {
+			return $this->__process($timeout * 1000000, TRUE);
 		}
 	}
 
@@ -646,9 +673,14 @@ class XMPPHP_XMLStream {
 							}
 						}
 						if ($searchxml !== null) {
-							if($handler[2] === null) $handler[2] = $this;
-							$this->log->log("Calling {$handler[1]}",  XMPPHP_Log::LEVEL_DEBUG);
-							$handler[2]->$handler[1]($this->xmlobj[2]);
+							if( is_object( $handler[1] ) and is_callable( $handler[1] ) ) {
+								$this->log->log("Calling Closure",  XMPPHP_Log::LEVEL_DEBUG);
+								$handler[1]($this->xmlobj[2]);
+							} else {
+								if($handler[2] === null) $handler[2] = $this;
+								$this->log->log("Calling {$handler[1]}",  XMPPHP_Log::LEVEL_DEBUG);
+								$handler[2]->$handler[1]($this->xmlobj[2]);
+							}
 						}
 					}
 				}
@@ -727,6 +759,7 @@ class XMPPHP_XMLStream {
 				$handler[2]->$handler[1]($payload);
 			}
 		}
+		if( $this->until != null )
 		foreach($this->until as $key => $until) {
 			if(is_array($until)) {
 				if(in_array($name, $until)) {
