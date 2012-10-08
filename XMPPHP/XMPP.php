@@ -27,8 +27,8 @@
  */
 
 /** XMPPHP_XMLStream */
-require_once 'XMPPHP/XMLStream.php';
-require_once 'XMPPHP/Roster.php';
+require_once dirname(__FILE__) . "/XMLStream.php";
+require_once dirname(__FILE__) . "/Roster.php";
 
 /**
  * XMPPHP Main Class
@@ -86,7 +86,7 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	/**
 	 * @var boolean
 	 */
-	protected $use_encryption = true;
+	protected $use_encryption = false;
 	
 	/**
 	 * @var boolean
@@ -133,10 +133,15 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 		$this->resource = $resource;
 		if(!$server) $server = $host;
 		$this->server = $server;
-		$this->basejid = $this->user . '@' . $this->host;
+		$this->basejid = $this->user . '@' . $this->server;
 
 		$this->roster = new Roster();
 		$this->track_presence = true;
+
+		$transports = stream_get_transports();
+		$transports = array_flip($transports);
+		if (isset($transports['sslv2']) || isset($transports['sslv3']))
+			$this->use_encryption = true;
 
 		$this->stream_start = '<stream:stream to="' . $server . '" xmlns:stream="http://etherx.jabber.org/streams" xmlns="jabber:client" version="1.0">';
 		$this->stream_end   = '</stream:stream>';
@@ -161,7 +166,7 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	public function useEncryption($useEncryption = true) {
 		$this->use_encryption = $useEncryption;
 	}
-	
+
 	/**
 	 * Turn on auto-authorization of subscription requests.
 	 *
@@ -205,7 +210,7 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	 * @param string $show
 	 * @param string $to
 	 */
-	public function presence($status = null, $show = 'available', $to = null, $type='available', $priority=null) {
+	public function presence($status = null, $show = 'available', $to = null, $type='available', $priority=null, $payload=null) {
 		if($type == 'available') $type = '';
 		$to	 = htmlspecialchars($to);
 		$status = htmlspecialchars($status);
@@ -214,13 +219,14 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 		$out = "<presence";
 		if($to) $out .= " to=\"$to\"";
 		if($type) $out .= " type='$type'";
-		if($show == 'available' and !$status and $priority !== null) {
+		if($show == 'available' and $status == null and $priority == null and $payload == null) {
 			$out .= "/>";
 		} else {
 			$out .= ">";
-			if($show != 'available') $out .= "<show>$show</show>";
-			if($status) $out .= "<status>$status</status>";
+			if($show != 'available' && $show != null) $out .= "<show>$show</show>";
+			if($status != null) $out .= "<status>$status</status>";
 			if($priority !== null) $out .= "<priority>$priority</priority>";
+			if($payload !== null) $out .= $payload;
 			$out .= "</presence>";
 		}
 		
@@ -246,7 +252,7 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	public function RosterAddUser($jid, $name=null, $group=null) {
 		$payload = "<item jid='$jid'".($name ? " name='" . htmlspecialchars($name) . "'" : '')."/>\n".
 		($group?'<group>'.htmlspecialchars($group, ENT_QUOTES, 'UTF-8').'</group>':'');
-		$this->SendIq(NULL, 'set', "jabber:iq:roster", $payload);
+		$this->sendIq(NULL, 'set', "jabber:iq:roster", $payload);
 	}
 
 	/**
@@ -258,9 +264,9 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	 * @param string $payload payload string
 	 * @param string $from from jid
 	 */
-	private function sendIq($to = NULL, $type = 'get', $xmlns = NULL, $payload = NULL, $from = NULL)
+	private function sendIq($to = NULL, $type = 'get', $xmlns = NULL, $payload = NULL, $from = NULL,$id = null)
 	{
-		$id = $this->getID();
+		if($id == null) $id = $this->getID();
 		$xml = "<iq type='$type' id='$id'".
 		($to ? " to='$to'" : '').
 		($from ? " from='$from'" : '').
@@ -297,9 +303,36 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 	 * @param string $xml
 	 */
 	public function presence_handler($xml) {
+		$payload['from'] = $xml->attrs['from'];	
+				
+		if($xml->hasSub('x')){
+			$x = $xml->sub('x');
+			if($x->hasSub('status'))
+				switch($x->sub('status')->attrs['code']){
+					case '201': 
+						$id = $this->getId();
+						$this->addIdHandler($id, 'room_join_handler');
+						$this->sendIq($payload['from'], 'set', 'http://jabber.org/protocol/muc#owner', $this->x(array('xmlns'=>'jabber:x:data', 'type'=>'submit')),null,$id);
+						$this->log->log("Presence#muc: sending default config for created room...",  XMPPHP_Log::LEVEL_DEBUG);						
+					break;
+					case '110':
+						$payload['affiliation'] = $x->sub('item')->attrs['affiliation'];
+						$payload['role'] = $x->sub('item')->attrs['role'];
+						$this->event('room_joined');
+					break;
+				}
+						
+		}
+		
+		if($xml->hasSub('error')){
+			$error = $xml->sub('error');
+			//TODO	$error->attrs['type']; different types of error may need different management
+			$this->event('presence_error', $payload);
+		}
+		
 		$payload['type'] = (isset($xml->attrs['type'])) ? $xml->attrs['type'] : 'available';
 		$payload['show'] = (isset($xml->sub('show')->data)) ? $xml->sub('show')->data : $payload['type'];
-		$payload['from'] = $xml->attrs['from'];
+
 		$payload['status'] = (isset($xml->sub('status')->data)) ? $xml->sub('status')->data : '';
 		$payload['priority'] = (isset($xml->sub('priority')->data)) ? intval($xml->sub('priority')->data) : 0;
 		$payload['xml'] = $xml;
@@ -561,5 +594,40 @@ class XMPPHP_XMPP extends XMPPHP_XMLStream {
 		}
 		$vcard_array['from'] = $xml->attrs['from'];
 		$this->event('vcard', $vcard_array);
+	}
+	
+	/*
+	* create xml for x tag
+	*
+	* @param string $attribs namespace or an associative array of attributes
+	* @param string $payload 
+	*/
+	protected function x($attribs=null, $payload=null){
+		$out = "<x";
+
+		if($attribs!=null){
+			if(is_array($attribs) === false)
+				$attribs = array("xmlns"=>$attribs);
+			foreach($attribs as $attrib=>$value)
+				$out .= " $attrib='$value'";				
+		}
+		$out .= $payload!=null? ">$payload</x>":"/>";
+		return $out;
+	}
+	
+	protected function room_join_handler($xml) {
+		$this->event('room_joined');
+	}
+	
+	/**
+	* join a room for multi-chat (or create one if not exists)
+	*
+	* @param string $name room name
+	* @param string $service hostname of the chat service
+	* @param string $password
+	*/
+	public function joinRoom($room=null, $service=null, $password=null){
+		if($password!=null) $password = "<password>$password</password>";
+		$this->presence(null,null,"$room@$service/{$this->user}",null,null,$this->x('http://jabber.org/protocol/muc',$password));
 	}
 }
