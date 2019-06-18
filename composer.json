@@ -1,0 +1,49 @@
+{
+    "name": "diogocomposer/xmpphp",
+    "description": "XMPP PHP Library",
+    "type": "library",
+    "keywords": ["jabber", "xmpphp", "xmpp"],
+    "license": "GPL-2.0+",
+    "authors": [
+        {
+            "name": "Nathan Fritz",
+            "email": "fritzy@netflint.net"
+        },
+        {
+            "name": "Stephan Wentz",
+            "email": "stephan@wentz.it"
+        },
+        {
+            "name": "Christian Weiske",
+            "email": "cweiske@cweiske.de"
+        },
+        {
+            "name": "Vito Tafuni",
+            "email": "vitotafuni@gmail.com"
+        },
+        {
+            "name": "Ivan Borzenkov",
+            "email": "ivan.borzenkov@gmail.com"
+        },
+        {
+            "name": "bandroidx",
+            "email": "bandroidx@gmail.com"
+        },
+        {
+            "name": "BirknerAlex",
+            "email": "alex.birkner@gmail.com"
+        },
+        {
+            "name": "Diogo Cordeiro",
+            "email": "diogo@fc.up.pt"
+        }
+    ],
+    "autoload": {
+        "psr-4": { "XMPPHP\\": "XMPPHP" }
+    },
+    "require": {
+        "php": ">=7.0.0",
+        "ext-mbstring": "*",
+        "ext-xml": "*"
+    }
+}
