@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file: XMPPHP Cli example BOSH
  *
@@ -19,30 +18,28 @@
  * LEVEL_VERBOSE = 4;
  */
 
-require '../vendor/autoload.php';
-
-$conf = array(
-  'server'   => 'server.tld',
-  'port'     => 5280,
-  'username' => 'username',
-  'password' => 'password',
-  'proto'    => 'xmpphp',
-  'domain'   => 'server.tld',
-  'printlog' => true,
-  'loglevel' => XMPPHP\Log::LEVEL_VERBOSE,
-);
+$conf = [
+    'host' => 'server.tld',
+    'port' => 5280,
+    'username' => 'username',
+    'password' => 'password',
+    'resource' => 'xmpphp',
+    'server' => 'http://server.tld:5280/xmpp-httpbind',
+    'print_log' => true,
+    'log_level' => XMPPHP\Log::LEVEL_VERBOSE,
+];
 
 // Easy and simple for access to variables with their names
 extract($conf);
 
-$conn = new XMPPHP\BOSH($server, $port, $username, $password, $proto, $domain, $printlog, $loglevel);
+$conn = new XMPPHP\BOSH($host, $port, $username, $password, $proto, $server, $print_log, $log_level);
 $conn->autoSubscribe();
 
 try {
-    $conn->connect('http://server.tld:5280/xmpp-httpbind');
+    $conn->connect();
 
     while (!$conn->isDisconnected()) {
-        $events   = array('message', 'presence', 'end_stream', 'session_start');
+        $events = ['message', 'presence', 'end_stream', 'session_start'];
         $payloads = $conn->processUntil($events);
 
         foreach ($payloads as $result) {
@@ -54,49 +51,49 @@ try {
 
             switch ($event) {
 
-        case 'message':
+                case 'message':
 
-          if (!$body) {
-              break;
-          }
+                    if (!$body) {
+                        break;
+                    }
 
-          echo str_repeat('-', 80);
-          echo "Message from: $from";
+                    echo str_repeat('-', 80);
+                    echo "Message from: $from";
 
-          if (isset($subject)) {
-              echo "Subject: $subject";
-          }
+                    if (isset($subject)) {
+                        echo "Subject: $subject";
+                    }
 
-          echo $body;
-          echo str_repeat('-', 80);
+                    echo $body;
+                    echo str_repeat('-', 80);
 
-          $cmd  = explode(' ', $body);
-          $body = "Mi no entender! '$body'";
-          $conn->message($from, $body, $type);
+                    $cmd = explode(' ', $body);
+                    $body = "Mi no entender! '$body'";
+                    $conn->message($from, $body, $type);
 
-          if (isset($cmd[0])) {
-              if ($cmd[0] == 'quit') {
-                  $conn->disconnect();
-              }
+                    if (isset($cmd[0])) {
+                        if ($cmd[0] == 'quit') {
+                            $conn->disconnect();
+                        }
 
-              if ($cmd[0] == 'break') {
-                  $conn->send('</end>');
-              }
-          }
-          break;
+                        if ($cmd[0] == 'break') {
+                            $conn->send('</end>');
+                        }
+                    }
+                    break;
 
-        case 'presence':
+                case 'presence':
 
-          echo "Presence: $from [$show] $status\n";
-          break;
+                    echo "Presence: $from [$show] $status\n";
+                    break;
 
-        case 'session_start':
+                case 'session_start':
 
-          echo "Session start\n";
-          $conn->getRoster();
-          $conn->presence('Quasar!');
-          break;
-      }
+                    echo "Session start\n";
+                    $conn->getRoster();
+                    $conn->presence('Quasar!');
+                    break;
+            }
         }
     }
 } catch (XMPPHP\Exception $e) {

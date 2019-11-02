@@ -63,14 +63,14 @@ class XMLObj
      *
      * @var array
      */
-    public $attrs = array();
+    public $attrs = [];
 
     /**
      * Subs?
      *
      * @var array
      */
-    public $subs = array();
+    public $subs = [];
 
     /**
      * Node data
@@ -83,11 +83,11 @@ class XMLObj
      * Constructor
      *
      * @param string $name
-     * @param string $ns
-     * @param array $attrs
-     * @param string $data
+     * @param string $ns (optional)
+     * @param array $attrs (optional)
+     * @param string $data (optional)
      */
-    public function __construct($name, $ns = '', $attrs = array(), $data = '')
+    public function __construct(string $name, string $ns = '', array $attrs = [], string $data = '')
     {
         $this->name = strtolower($name);
         $this->ns = $ns;
@@ -102,9 +102,9 @@ class XMLObj
     /**
      * Dump this XML Object to output.
      *
-     * @param integer $depth
+     * @param int $depth (optional)
      */
-    public function printObj($depth = 0)
+    public function printObj(int $depth = 0): void
     {
         print str_repeat("\t", $depth) . $this->name . " " . $this->ns . ' ' . $this->data;
         print "\n";
@@ -116,10 +116,10 @@ class XMLObj
     /**
      * Return this XML Object in xml notation
      *
-     * @param string $str
+     * @param string $str (optional)
      * @return string
      */
-    public function toString($str = '')
+    public function toString(string $str = ''): string
     {
         $str .= "<{$this->name} xmlns='{$this->ns}' ";
         foreach ($this->attrs as $key => $value) {
@@ -141,10 +141,10 @@ class XMLObj
      * Has this XML Object the given sub?
      *
      * @param string $name
-     * @param null $ns
-     * @return boolean
+     * @param string|null $ns
+     * @return bool
      */
-    public function hasSub($name, $ns = null)
+    public function hasSub(string $name, ?string $ns = null): bool
     {
         foreach ($this->subs as $sub) {
             if (($name == "*" or $sub->name == $name) and ($ns == null or $sub->ns == $ns)) {
@@ -158,11 +158,11 @@ class XMLObj
      * Return a sub
      *
      * @param string $name
-     * @param string $attrs
-     * @param string $ns
+     * @param array|null $attrs (optional)
+     * @param string|null $ns (optional)
      * @return mixed
      */
-    public function sub($name, $attrs = null, $ns = null)
+    public function sub(string $name, ?array $attrs = null, ?string $ns = null)
     {
         #TODO attrs is ignored
         foreach ($this->subs as $sub) {
@@ -170,5 +170,6 @@ class XMLObj
                 return $sub;
             }
         }
+        return null;
     }
 }

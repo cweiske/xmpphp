@@ -1,5 +1,4 @@
 <?php
-
 /**
  * XMPPHP: The PHP XMPP Library
  * Copyright (C) 2008  Nathanael C. Fritz
@@ -53,20 +52,20 @@ class Log
     /**
      * @var array
      */
-    protected $data = array();
+    protected $data = [];
 
     /**
      * @var array
      */
-    protected $names = array('ERROR', 'WARNING', 'INFO', 'DEBUG', 'VERBOSE');
+    protected $names = ['ERROR', 'WARNING', 'INFO', 'DEBUG', 'VERBOSE'];
 
     /**
-     * @var integer
+     * @var int
      */
     protected $runlevel;
 
     /**
-     * @var boolean
+     * @var bool
      */
     protected $printout;
 
@@ -74,11 +73,11 @@ class Log
      * Constructor
      *
      * @param boolean $printout
-     * @param int $runlevel
+     * @param int $runlevel (optional)
      */
-    public function __construct($printout = false, $runlevel = self::LEVEL_INFO)
+    public function __construct($printout = false, int $runlevel = self::LEVEL_INFO)
     {
-        $this->printout = (boolean)$printout;
+        $this->printout = (bool)$printout;
         $this->runlevel = (int)$runlevel;
     }
 
@@ -87,18 +86,23 @@ class Log
      * If printout in this instance is set to true, directly output the message
      *
      * @param string $msg
-     * @param integer $runlevel
+     * @param int $runlevel (optional)
      */
-    public function log($msg, $runlevel = self::LEVEL_INFO)
+    public function log($msg, $runlevel = self::LEVEL_INFO): void
     {
         $time = time();
-        #$this->data[] = array($this->runlevel, $msg, $time);
+        //$this->data[] = [$this->runlevel, $msg, $time];
         if ($this->printout and $runlevel <= $this->runlevel) {
             $this->writeLine($msg, $runlevel, $time);
         }
     }
 
-    protected function writeLine($msg, $runlevel, $time)
+    /**
+     * @param string $msg
+     * @param int $runlevel
+     * @param int $time
+     */
+    protected function writeLine(string $msg, int $runlevel, int $time): void
     {
         //echo date('Y-m-d H:i:s', $time)." [".$this->names[$runlevel]."]: ".$msg."\n";
         echo $time . " [" . $this->names[$runlevel] . "]: " . $msg . "\n";
@@ -109,10 +113,10 @@ class Log
      * Output the complete log.
      * Log will be cleared if $clear = true
      *
-     * @param boolean $clear
-     * @param integer $runlevel
+     * @param bool $clear
+     * @param int $runlevel
      */
-    public function printout($clear = true, $runlevel = null)
+    public function printout(bool $clear = true, int $runlevel = null): void
     {
         if ($runlevel === null) {
             $runlevel = $this->runlevel;
@@ -123,7 +127,7 @@ class Log
             }
         }
         if ($clear) {
-            $this->data = array();
+            $this->data = [];
         }
     }
 }

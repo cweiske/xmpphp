@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @file: XMPPHP Send message example
  *
@@ -18,18 +17,16 @@
  * LEVEL_VERBOSE = 4;
  */
 
-require_once __DIR__.'/../vendor/autoload.php';
-
-$conf = array(
-  'server'   => 'talk.google.com',
-  'port'     => 5222,
-  'username' => 'username',
-  'password' => 'password',
-  'proto'    => 'xmpphp',
-  'domain'   => 'gmail.com',
-  'printlog' => true,
-  'loglevel' => XMPPHP\Log::LEVEL_VERBOSE,
-);
+$conf = [
+    'server' => 'jabber.domain.com',
+    'port' => 5222,
+    'username' => 'username',
+    'password' => 'password',
+    'proto' => 'xmpphp',
+    'domain' => 'domain.net',
+    'printlog' => true,
+    'loglevel' => XMPPHP\Log::LEVEL_VERBOSE,
+];
 
 // Easy and simple for access to variables with their names
 extract($conf);

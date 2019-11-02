@@ -1,5 +1,4 @@
 <?php
-
 /**
  * XMPPHP: The PHP XMPP Library
  * Copyright (C) 2008  Nathanael C. Fritz
@@ -35,7 +34,7 @@ namespace XMPPHP;
 use SimpleXMLElement;
 
 /** XMPPHP_XMLStream */
-require_once __DIR__ . "/XMPP.php";
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'XMPP.php';
 
 /**
  * XMPPHP BOSH
@@ -51,7 +50,7 @@ require_once __DIR__ . "/XMPP.php";
 class BOSH extends XMPP
 {
     /**
-     * @var integer
+     * @var int
      */
     protected $rid;
 
@@ -68,7 +67,7 @@ class BOSH extends XMPP
     /**
      * @var array
      */
-    protected $http_buffer = array();
+    protected $http_buffer = [];
 
     /**
      * @var string
@@ -76,50 +75,58 @@ class BOSH extends XMPP
     protected $session = false;
 
     /**
-     * @var integer
+     * @var int
      */
     protected $inactivity;
 
-    /**
-     * Connect
-     *
-     * @param $server
-     * @param $wait
-     * @param $session
-     * @throws Exception
-     * @throws Exception
-     */
-    public function connect($server = null, $wait = '1', $session = false)
-    {
-
+    public function __construct(
+        string $host,
+        int $port,
+        string $user,
+        string $password,
+        string $resource,
+        ?string $server = null,
+        bool $print_log = false,
+        ?string $log_level = null
+    ) {
+        parent::__construct($host, $port, $user, $password, $resource, $server, $print_log, $log_level);
         if (is_null($server)) {
-
             // If we aren't given the server http url, try and guess it
-            $port_string = ($this->port AND $this->port != 80) ? ':' . $this->port : '';
+            $port_string = ($this->port and $this->port != 80) ? ':' . $this->port : '';
             $this->http_server = 'http://' . $this->host . $port_string . '/http-bind/';
         } else {
             $this->http_server = $server;
         }
+    }
 
+    /**
+     * Connect
+     *
+     * @param bool $persistent
+     * @param bool $send_init
+     * @param int $timeout
+     * @throws Exception
+     */
+    public function connect(bool $persistent = false, bool $send_init = true, int $timeout = 30): void
+    {
         $this->use_encryption = false;
-        $this->session = $session;
+        $this->session = $persistent;
         $this->rid = 3001;
         $this->sid = null;
         $this->inactivity = 0;
 
-        if ($session) {
+        if ($persistent) {
             $this->loadSession();
         }
 
         if (!$this->sid) {
-
             $body = $this->__buildBody();
             $body->addAttribute('hold', '1');
             $body->addAttribute('to', $this->server);
             $body->addAttribute('route', 'xmpp:' . $this->host . ':' . $this->port);
             $body->addAttribute('secure', 'true');
             $body->addAttribute('xmpp:version', '1.0', 'urn:xmpp:xbosh');
-            $body->addAttribute('wait', strval($wait));
+            $body->addAttribute('wait', strval($timeout));
             $body->addAttribute('ack', '1');
             $body->addAttribute('xmlns:xmpp', 'urn:xmpp:xbosh');
             $buff = '<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">';
@@ -138,11 +145,9 @@ class BOSH extends XMPP
      * Load session
      *
      */
-    public function loadSession()
+    public function loadSession(): void
     {
-
         if ($this->session == 'ON_FILE') {
-
             // Session not started so use session_file
             $session_file = $this->getSessionFile();
 
@@ -169,7 +174,6 @@ class BOSH extends XMPP
         $this->lat = (time() - (isset($_SESSION['XMPPHP_BOSH']['lat']))) ? $_SESSION['XMPPHP_BOSH']['lat'] : 0;
 
         if ($this->lat < $this->inactivity) {
-
             if (isset($_SESSION['XMPPHP_BOSH']['RID'])) {
                 $this->rid = $_SESSION['XMPPHP_BOSH']['RID'];
             }
@@ -189,10 +193,10 @@ class BOSH extends XMPP
     }
 
     /**
-     * Get the session file
+     * Get the session file location
      *
      */
-    public function getSessionFile()
+    public function getSessionFile(): string
     {
         return sys_get_temp_dir() . '/' . $this->user . '_' . $this->server . '_session';
     }
@@ -200,17 +204,15 @@ class BOSH extends XMPP
     /**
      * Build body
      *
-     * @param $sub
-     * @return SimpleXMLElement|string
+     * @param SimpleXMLElement|null $sub
+     * @return SimpleXMLElement
      */
-    public function __buildBody($sub = null)
+    private function __buildBody(?SimpleXMLElement $sub = null): SimpleXMLElement
     {
-
-        $xml = '<body xmlns="http://jabber.org/protocol/httpbind" xmlns:xmpp="urn:xmpp:xbosh" />';
-        $xml = new SimpleXMLElement($xml);
+        $xml = new SimpleXMLElement('<body xmlns="http://jabber.org/protocol/httpbind" xmlns:xmpp="urn:xmpp:xbosh" />');
         $xml->addAttribute('content', 'text/xml; charset=utf-8');
         $xml->addAttribute('rid', $this->rid);
-        $this->rid++;
+        ++$this->rid;
         if ($this->sid) {
             $xml->addAttribute('sid', $this->sid);
         }
@@ -218,7 +220,6 @@ class BOSH extends XMPP
         $xml->addAttribute('xml:lang', 'en');
 
         if ($sub !== null) {
-
             // Ok, so simplexml is lame
             $parent = dom_import_simplexml($xml);
             $content = dom_import_simplexml($sub);
@@ -233,21 +234,19 @@ class BOSH extends XMPP
     /**
      * Send body
      *
-     * @param $body
-     * @param $recv
+     * @param SimpleXMLElement|null $body
+     * @param bool $recv
      * @return bool|string
      * @throws Exception
-     * @throws Exception
      */
-    public function __sendBody($body = null, $recv = true)
+    private function __sendBody(?SimpleXMLElement $body = null, bool $recv = true)
     {
-
         if (!$body) {
             $body = $this->__buildBody();
         }
 
         $output = '';
-        $header = array('Accept-Encoding: gzip, deflate', 'Content-Type: text/xml; charset=utf-8');
+        $header = ['Accept-Encoding: gzip, deflate', 'Content-Type: text/xml; charset=utf-8'];
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, $this->http_server);
@@ -283,9 +282,8 @@ class BOSH extends XMPP
      * @throws Exception
      * @throws Exception
      */
-    public function __process($null1 = null, $null2 = null)
+    private function __process($null1 = null, $null2 = null)
     {
-
         if ($this->http_buffer) {
             $this->__parseBuffer();
         } else {
@@ -298,17 +296,14 @@ class BOSH extends XMPP
         return true;
     }
 
-    public function __parseBuffer()
+    private function __parseBuffer()
     {
-
         while ($this->http_buffer) {
-
             $idx = key($this->http_buffer);
             $buffer = $this->http_buffer[$idx];
             unset($this->http_buffer[$idx]);
 
             if ($buffer) {
-
                 $xml = new SimpleXMLElement($buffer);
                 $children = $xml->xpath('child::node()');
 
@@ -325,9 +320,8 @@ class BOSH extends XMPP
      * Save session
      *
      */
-    public function saveSession()
+    public function saveSession(): void
     {
-
         $_SESSION['XMPPHP_BOSH']['RID'] = (string)$this->rid;
         $_SESSION['XMPPHP_BOSH']['SID'] = (string)$this->sid;
         $_SESSION['XMPPHP_BOSH']['authed'] = (boolean)$this->authed;
@@ -337,7 +331,6 @@ class BOSH extends XMPP
         $_SESSION['XMPPHP_BOSH']['lat'] = (string)time();
 
         if ($this->session == 'ON_FILE') {
-
             $session_file = $this->getSessionFile();
             $session_file_fp = fopen($session_file, 'r');
             flock($session_file_fp, LOCK_EX);
@@ -353,13 +346,10 @@ class BOSH extends XMPP
      * Process
      *
      * @param $msg
-     * @param $null
-     *
-     * null param are not used and just to statify Strict Function Declaration
-     * @throws Exception
+     * @param int|null $_ unused
      * @throws Exception
      */
-    public function send($msg, $null = null)
+    public function send($msg, ?int $_ = null)
     {
         $this->log->log('SEND: ' . $msg, Log::LEVEL_VERBOSE);
         $msg = new SimpleXMLElement($msg);
@@ -371,18 +361,17 @@ class BOSH extends XMPP
      *
      * @throws Exception
      */
-    public function reset()
+    public function reset(): void
     {
-
         $this->xml_depth = 0;
         unset($this->xmlobj);
-        $this->xmlobj = array();
+        $this->xmlobj = [];
         $this->setupParser();
         $body = $this->__buildBody();
         $body->addAttribute('to', $this->host);
         $body->addAttribute('xmpp:restart', 'true', 'urn:xmpp:xbosh');
         $buff = '<stream:stream xmlns="jabber:client" xmlns:stream="http://etherx.jabber.org/streams">';
-        $response = $this->__sendBody($body);
+        $this->__sendBody($body);
         $this->been_reset = true;
         xml_parse($this->parser, $buff, false);
     }
@@ -392,15 +381,14 @@ class BOSH extends XMPP
      *
      * @throws Exception
      */
-    public function disconnect()
+    public function disconnect(): void
     {
-
         parent::disconnect();
 
         if ($this->session == 'ON_FILE') {
             unlink($this->getSessionFile());
         } else {
-            $keys = array('RID', 'SID', 'authed', 'basejid', 'fulljid', 'inactivity', 'lat');
+            $keys = ['RID', 'SID', 'authed', 'basejid', 'fulljid', 'inactivity', 'lat'];
             foreach ($keys as $key) {
                 unset($_SESSION['XMPPHP_BOSH'][$key]);
             }

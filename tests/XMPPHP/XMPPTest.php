@@ -55,7 +55,7 @@ class XMPPHP_XMPPTest extends PHPUnit_Framework_TestCase
         } catch (XMPPHP_Exception $e) {
             return;
         } catch (Exception $e) {
-            $this->fail('Unexpected Exception thrown: '.$e->getMessage());
+            $this->fail('Unexpected Exception thrown: ' . $e->getMessage());
         }
 
         $this->fail('Expected XMPPHP_Exception not thrown!');
@@ -74,7 +74,7 @@ class XMPPHP_XMPPTest extends PHPUnit_Framework_TestCase
         } catch (XMPPHP_Exception $e) {
             return;
         } catch (Exception $e) {
-            $this->fail('Unexpected Exception thrown: '.$e->getMessage());
+            $this->fail('Unexpected Exception thrown: ' . $e->getMessage());
         }
 
         $this->fail('Expected XMPPHP_Exception not thrown!');

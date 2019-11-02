@@ -1,5 +1,4 @@
 <?php
-
 /**
  * XMPPHP: The PHP XMPP Library
  * Copyright (C) 2008  Nathanael C. Fritz
@@ -59,7 +58,7 @@ class XMPP extends XMLStream
      */
     public $user;
     /**
-     * @var boolean
+     * @var bool
      */
     public $track_presence = true;
     /**
@@ -83,16 +82,16 @@ class XMPP extends XMLStream
      */
     protected $basejid;
     /**
-     * @var boolean
+     * @var bool
      */
     protected $authed = false;
     protected $session_started = false;
     /**
-     * @var boolean
+     * @var bool
      */
     protected $auto_subscribe = false;
     /**
-     * @var boolean
+     * @var bool
      */
     protected $use_encryption = true;
 
@@ -105,12 +104,20 @@ class XMPP extends XMLStream
      * @param string $password
      * @param string $resource
      * @param string $server
-     * @param boolean $printlog
-     * @param string $loglevel
+     * @param bool $print_log
+     * @param string $log_level
      */
-    public function __construct($host, $port, $user, $password, $resource, $server = null, $printlog = false, $loglevel = null)
-    {
-        parent::__construct($host, $port, $printlog, $loglevel);
+    public function __construct(
+        string $host,
+        int $port,
+        string $user,
+        string $password,
+        string $resource,
+        ?string $server = null,
+        bool $print_log = false,
+        ?string $log_level = null
+    ) {
+        parent::__construct($host, $port, $print_log, $log_level);
 
         $this->user = $user;
         $this->password = $password;
@@ -140,9 +147,9 @@ class XMPP extends XMLStream
     /**
      * Turn encryption on/ff
      *
-     * @param boolean $useEncryption
+     * @param bool $useEncryption (optional)
      */
-    public function useEncryption($useEncryption = true)
+    public function useEncryption(bool $useEncryption = true): void
     {
         $this->use_encryption = $useEncryption;
     }
@@ -150,9 +157,9 @@ class XMPP extends XMLStream
     /**
      * Turn on auto-authorization of subscription requests.
      *
-     * @param boolean $autoSubscribe
+     * @param bool $autoSubscribe (optional)
      */
-    public function autoSubscribe($autoSubscribe = true)
+    public function autoSubscribe(bool $autoSubscribe = true): void
     {
         $this->auto_subscribe = $autoSubscribe;
     }
@@ -162,12 +169,12 @@ class XMPP extends XMLStream
      *
      * @param string $to
      * @param string $body
-     * @param string $type
-     * @param string $subject
-     * @param null $payload
+     * @param string $type (optional)
+     * @param string|null $subject (optional)
+     * @param string|null $payload (optional)
      * @throws Exception
      */
-    public function message($to, $body, $type = 'chat', $subject = null, $payload = null)
+    public function message(string $to, string $body, string $type = 'chat', ?string $subject = null, ?string $payload = null): void
     {
         if ($this->disconnected) {
             throw new Exception('You need to connect first');
@@ -177,13 +184,13 @@ class XMPP extends XMLStream
             $type = 'chat';
         }
 
-        $to      = htmlspecialchars($to);
-        $body    = htmlspecialchars($body);
+        $to = htmlspecialchars($to);
+        $body = htmlspecialchars($body);
         $subject = htmlspecialchars($subject);
         $subject = ($subject) ? '<subject>' . $subject . '</subject>' : '';
         $payload = ($payload) ? $payload : '';
         $sprintf = '<message from="%s" to="%s" type="%s">%s<body>%s</body>%s</message>';
-        $output  = sprintf($sprintf, $this->fulljid, $to, $type, $subject, $body, $payload);
+        $output = sprintf($sprintf, $this->fulljid, $to, $type, $subject, $body, $payload);
         $this->send($output);
     }
 
@@ -197,7 +204,7 @@ class XMPP extends XMLStream
      * @param null $priority
      * @throws Exception
      */
-    public function presence($status = null, $show = 'available', $to = null, $type = 'available', $priority = null)
+    public function presence($status = null, $show = 'available', $to = null, $type = 'available', $priority = null): void
     {
         if ($this->disconnected) {
             throw new Exception('You need to connect first');
@@ -242,8 +249,9 @@ class XMPP extends XMLStream
      * Send Auth request
      *
      * @param string $jid
+     * @throws Exception
      */
-    public function subscribe($jid)
+    public function subscribe(string $jid): void
     {
         $this->send("<presence type='subscribe' to='{$jid}' from='{$this->fulljid}' />");
         #$this->send("<presence type='subscribed' to='{$jid}' from='{$this->fulljid}' />");
@@ -254,7 +262,7 @@ class XMPP extends XMLStream
      *
      * @param string $xml
      */
-    public function message_handler($xml)
+    public function message_handler(string $xml): void
     {
         if (isset($xml->attrs['type'])) {
             $payload['type'] = $xml->attrs['type'];
@@ -273,8 +281,9 @@ class XMPP extends XMLStream
      * Presence handler
      *
      * @param string $xml
+     * @throws Exception
      */
-    public function presence_handler($xml)
+    public function presence_handler(string $xml): void
     {
         $payload['type'] = (isset($xml->attrs['type'])) ? $xml->attrs['type'] : 'available';
         $payload['show'] = (isset($xml->sub('show')->data)) ? $xml->sub('show')->data : $payload['type'];
@@ -302,8 +311,9 @@ class XMPP extends XMLStream
     /**
      * Retrieves the roster
      *
+     * @throws Exception
      */
-    public function getRoster()
+    public function getRoster(): void
     {
         $id = $this->getID();
         $this->send("<iq xmlns='jabber:client' type='get' id='$id'><query xmlns='jabber:iq:roster' /></iq>");
@@ -311,9 +321,10 @@ class XMPP extends XMLStream
 
     /**
      * Retrieves the vcard
-     * @param null $jid
+     * @param string|null $jid
+     * @throws Exception
      */
-    public function getVCard($jid = null)
+    public function getVCard(?string $jid = null): void
     {
         $id = $this->getID();
         $this->addIdHandler($id, 'vcard_get_handler');
@@ -328,8 +339,9 @@ class XMPP extends XMLStream
      * Features handler
      *
      * @param string $xml
+     * @throws Exception
      */
-    protected function features_handler($xml)
+    protected function features_handler(string $xml): void
     {
         if ($xml->hasSub('starttls') and $this->use_encryption) {
             $this->send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required /></starttls>");
@@ -351,8 +363,9 @@ class XMPP extends XMLStream
      * SASL success handler
      *
      * @param string $xml
+     * @throws Exception
      */
-    protected function sasl_success_handler($xml)
+    protected function sasl_success_handler(string $xml): void
     {
         $this->log->log("Auth success!");
         $this->authed = true;
@@ -365,7 +378,7 @@ class XMPP extends XMLStream
      * @param string $xml
      * @throws Exception
      */
-    protected function sasl_failure_handler($xml)
+    protected function sasl_failure_handler(string $xml): void
     {
         $this->log->log("Auth failed!", Log::LEVEL_ERROR);
         $this->disconnect();
@@ -377,8 +390,9 @@ class XMPP extends XMLStream
      * Resource bind handler
      *
      * @param string $xml
+     * @throws Exception
      */
-    protected function resource_bind_handler($xml)
+    protected function resource_bind_handler(string $xml): void
     {
         if ($xml->attrs['type'] == 'result') {
             $this->log->log("Bound to " . $xml->sub('bind')->sub('jid')->data);
@@ -396,13 +410,15 @@ class XMPP extends XMLStream
      * Gets all packets matching XPath "iq/{jabber:iq:roster}query'
      *
      * @param string $xml
+     * @throws Exception
      */
-    protected function roster_iq_handler($xml)
+    protected function roster_iq_handler(string $xml): void
     {
         $status = "result";
         $xmlroster = $xml->sub('query');
+        $contacts = [];
         foreach ($xmlroster->subs as $item) {
-            $groups = array();
+            $groups = [];
             if ($item->name == 'item') {
                 $jid = $item->attrs['jid']; //REQUIRED
                 $name = $item->attrs['name']; //MAY
@@ -412,7 +428,7 @@ class XMPP extends XMLStream
                         $groups[] = $subitem->data;
                     }
                 }
-                $contacts[] = array($jid, $subscription, $name, $groups); //Store for action if no errors happen
+                $contacts[] = [$jid, $subscription, $name, $groups]; //Store for action if no errors happen
             } else {
                 $status = "error";
             }
@@ -432,7 +448,7 @@ class XMPP extends XMLStream
      *
      * @param string $xml
      */
-    protected function session_start_handler($xml)
+    protected function session_start_handler(string $xml): void
     {
         $this->log->log("Session started");
         $this->session_started = true;
@@ -443,8 +459,9 @@ class XMPP extends XMLStream
      * TLS proceed handler
      *
      * @param string $xml
+     * @throws Exception
      */
-    protected function tls_proceed_handler($xml)
+    protected function tls_proceed_handler(string $xml): void
     {
         $this->log->log("Starting TLS encryption");
         stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
@@ -456,14 +473,14 @@ class XMPP extends XMLStream
      *
      * @param XMLObj $xml
      */
-    protected function vcard_get_handler($xml)
+    protected function vcard_get_handler(XMLObj $xml): void
     {
-        $vcard_array = array();
+        $vcard_array = [];
         $vcard = $xml->sub('vcard');
         // go through all of the sub elements and add them to the vcard array
         foreach ($vcard->subs as $sub) {
             if ($sub->subs) {
-                $vcard_array[$sub->name] = array();
+                $vcard_array[$sub->name] = [];
                 foreach ($sub->subs as $sub_child) {
                     $vcard_array[$sub->name][$sub_child->name] = $sub_child->data;
                 }
