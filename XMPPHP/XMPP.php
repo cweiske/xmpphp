@@ -447,7 +447,7 @@ class XMPP extends XMLStream
     protected function tls_proceed_handler($xml)
     {
         $this->log->log("Starting TLS encryption");
-        stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_SSLv23_CLIENT);
+        stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
         $this->reset();
     }
 
