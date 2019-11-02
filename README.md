@@ -16,5 +16,5 @@ XMPPHP is an elegant PHP library for XMPP (aka Jabber, Google Talk, etc).
 Requirements
 ------------
 
-* PHP 7.0
+* PHP 7.3 or later
 * SSL Support Compiled

@@ -42,7 +42,7 @@
         "psr-4": { "XMPPHP\\": "XMPPHP" }
     },
     "require": {
-        "php": ">=7.0.0",
+        "php": "^7.3.0",
         "ext-mbstring": "*",
         "ext-xml": "*"
     }
