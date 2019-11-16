@@ -260,9 +260,9 @@ class XMPP extends XMLStream
     /**
      * Message handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      */
-    public function message_handler(string $xml): void
+    public function message_handler(XMLObj $xml): void
     {
         if (isset($xml->attrs['type'])) {
             $payload['type'] = $xml->attrs['type'];
@@ -280,10 +280,10 @@ class XMPP extends XMLStream
     /**
      * Presence handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    public function presence_handler(string $xml): void
+    public function presence_handler(XMLObj $xml): void
     {
         $payload['type'] = (isset($xml->attrs['type'])) ? $xml->attrs['type'] : 'available';
         $payload['show'] = (isset($xml->sub('show')->data)) ? $xml->sub('show')->data : $payload['type'];
@@ -338,10 +338,10 @@ class XMPP extends XMLStream
     /**
      * Features handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function features_handler(string $xml): void
+    protected function features_handler(XMLObj $xml): void
     {
         if ($xml->hasSub('starttls') and $this->use_encryption) {
             $this->send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required /></starttls>");
@@ -362,10 +362,10 @@ class XMPP extends XMLStream
     /**
      * SASL success handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function sasl_success_handler(string $xml): void
+    protected function sasl_success_handler(XMLObj $xml): void
     {
         $this->log->log("Auth success!");
         $this->authed = true;
@@ -375,10 +375,10 @@ class XMPP extends XMLStream
     /**
      * SASL feature handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function sasl_failure_handler(string $xml): void
+    protected function sasl_failure_handler(XMLObj $xml): void
     {
         $this->log->log("Auth failed!", Log::LEVEL_ERROR);
         $this->disconnect();
@@ -389,10 +389,10 @@ class XMPP extends XMLStream
     /**
      * Resource bind handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function resource_bind_handler(string $xml): void
+    protected function resource_bind_handler(XMLObj $xml): void
     {
         if ($xml->attrs['type'] == 'result') {
             $this->log->log("Bound to " . $xml->sub('bind')->sub('jid')->data);
@@ -409,10 +409,10 @@ class XMPP extends XMLStream
      * Roster iq handler
      * Gets all packets matching XPath "iq/{jabber:iq:roster}query'
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function roster_iq_handler(string $xml): void
+    protected function roster_iq_handler(XMLObj $xml): void
     {
         $status = "result";
         $xmlroster = $xml->sub('query');
@@ -446,9 +446,9 @@ class XMPP extends XMLStream
     /**
      * Session start handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      */
-    protected function session_start_handler(string $xml): void
+    protected function session_start_handler(XMLObj $xml): void
     {
         $this->log->log("Session started");
         $this->session_started = true;
@@ -458,10 +458,10 @@ class XMPP extends XMLStream
     /**
      * TLS proceed handler
      *
-     * @param string $xml
+     * @param XMLObj $xml
      * @throws Exception
      */
-    protected function tls_proceed_handler(string $xml): void
+    protected function tls_proceed_handler(XMLObj $xml): void
     {
         $this->log->log("Starting TLS encryption");
         stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);

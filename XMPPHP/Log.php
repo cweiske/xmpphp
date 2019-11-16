@@ -75,10 +75,10 @@ class Log
      * @param boolean $printout
      * @param int $runlevel (optional)
      */
-    public function __construct($printout = false, int $runlevel = self::LEVEL_INFO)
+    public function __construct($printout = false, ?int $runlevel = self::LEVEL_INFO)
     {
-        $this->printout = (bool)$printout;
-        $this->runlevel = (int)$runlevel;
+        $this->printout = (bool) $printout;
+        $this->runlevel = (int) ($runlevel ?? 0);
     }
 
     /**

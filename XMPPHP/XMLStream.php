@@ -581,9 +581,9 @@ class XMLStream
      *
      * @param string $name
      * @param string $pointer
-     * @param string $obj
+     * @param object $obj
      */
-    public function addEventHandler(string $name, string $pointer, string $obj)
+    public function addEventHandler(string $name, string $pointer, object $obj)
     {
         $this->eventhandlers[] = [$name, $pointer, $obj];
     }
@@ -644,12 +644,12 @@ class XMLStream
     /**
      * XML start callback
      *
-     * @param string resource $parser
+     * @param resource $parser
      * @param string $name
      * @param array $attr
      * @see xml_set_element_handler
      */
-    public function startXML(string $parser, string $name, array $attr): void
+    public function startXML($parser, string $name, array $attr): void
     {
         if ($this->been_reset) {
             $this->been_reset = false;
@@ -687,13 +687,13 @@ class XMLStream
     /**
      * XML end callback
      *
-     * @param string resource $parser
+     * @param resource $parser
      * @param string $name
      * @throws Exception
      * @see xml_set_element_handler
      *
      */
-    public function endXML(string $parser, string $name): void
+    public function endXML($parser, string $name): void
     {
         #$this->log->log("Ending $name",  Log::LEVEL_DEBUG);
         #print "$name\n";
@@ -780,12 +780,12 @@ class XMLStream
 
     /**
      * XML character callback
-     * @param string resource $parser
+     * @param resource $parser
      * @param string $data
      * @see xml_set_character_data_handler
      *
      */
-    public function charXML(string $parser, string $data): void
+    public function charXML($parser, string $data): void
     {
         if (array_key_exists($this->xml_depth, $this->xmlobj)) {
             $this->xmlobj[$this->xml_depth]->data .= $data;
