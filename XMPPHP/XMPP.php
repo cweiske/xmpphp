@@ -435,28 +435,30 @@ class XMPP extends XMLStream
      */
     protected function roster_iq_handler(XMLObj $xml): void
     {
-        $status = "result";
+        $status = 'result';
         $xmlroster = $xml->sub('query');
         $contacts = [];
         foreach ($xmlroster->subs as $item) {
             $groups = [];
-            if ($item->name == 'item') {
-                $jid = $item->attrs['jid']; //REQUIRED
-                $name = $item->attrs['name']; //MAY
-                $subscription = $item->attrs['subscription'];
+            if ($item->name === 'item') {
+                $jid = $item->attrs['jid'];  // REQUIRED
+                $name = $item->attrs['name'] ?? '';
+                $subscription = $item->attrs['subscription'] ?? 'none';
                 foreach ($item->subs as $subitem) {
-                    if ($subitem->name == 'group') {
+                    if ($subitem->name === 'group') {
                         $groups[] = $subitem->data;
                     }
                 }
-                $contacts[] = [$jid, $subscription, $name, $groups]; //Store for action if no errors happen
+                // Store for action if no errors happen
+                $contacts[] = [$jid, $subscription, $name, $groups];
             } else {
-                $status = "error";
+                $status = 'error';
             }
         }
-        if ($status == "result") { //No errors, add contacts
+        // No errors, add contacts
+        if ($status === 'result') {
             foreach ($contacts as $contact) {
-                $this->roster->addContact($contact[0], $contact[1], $contact[2], $contact[3]);
+                $this->roster->addContact(...$contact);
             }
         }
         if ($xml->attrs['type'] == 'set') {

@@ -79,14 +79,14 @@ class Roster
      * Retrieve contact via jid
      *
      * @param string $jid
-     * @return mixed|void
+     * @return array|null
      */
-    public function getContact(string $jid)
+    public function getContact(string $jid): ?array
     {
         if ($this->isContact($jid)) {
             return $this->roster_array[$jid]['contact'];
         }
-        return;
+        return null;
     }
 
     /**
@@ -128,12 +128,16 @@ class Roster
      * Add given contact to roster
      *
      * @param string $jid
-     * @param string $subscription
+     * @param string $subscription (optional)
      * @param string $name (optional)
      * @param array $groups (optional)
      */
-    public function addContact(string $jid, string $subscription, string $name = '', array $groups = []): void
-    {
+    public function addContact(
+        string $jid,
+        string $subscription = 'none',
+        string $name = '',
+        array  $groups = []
+    ): void {
         $contact = ['jid' => $jid, 'subscription' => $subscription, 'name' => $name, 'groups' => $groups];
         if ($this->isContact($jid)) {
             $this->roster_array[$jid]['contact'] = $contact;
