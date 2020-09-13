@@ -135,13 +135,34 @@ class XMPP extends XMLStream
         $this->stream_end = '</stream:stream>';
         $this->default_ns = 'jabber:client';
 
-        $this->addXPathHandler('{http://etherx.jabber.org/streams}features', 'features_handler');
-        $this->addXPathHandler('{urn:ietf:params:xml:ns:xmpp-sasl}success', 'sasl_success_handler');
-        $this->addXPathHandler('{urn:ietf:params:xml:ns:xmpp-sasl}failure', 'sasl_failure_handler');
-        $this->addXPathHandler('{urn:ietf:params:xml:ns:xmpp-tls}proceed', 'tls_proceed_handler');
-        $this->addXPathHandler('{jabber:client}message', 'message_handler');
-        $this->addXPathHandler('{jabber:client}presence', 'presence_handler');
-        $this->addXPathHandler('iq/{jabber:iq:roster}query', 'roster_iq_handler');
+        $this->addXPathHandler(
+            '{http://etherx.jabber.org/streams}features',
+            [$this, 'features_handler']
+        );
+        $this->addXPathHandler(
+            '{urn:ietf:params:xml:ns:xmpp-sasl}success',
+            [$this, 'sasl_success_handler']
+        );
+        $this->addXPathHandler(
+            '{urn:ietf:params:xml:ns:xmpp-sasl}failure',
+            [$this, 'sasl_failure_handler']
+        );
+        $this->addXPathHandler(
+            '{urn:ietf:params:xml:ns:xmpp-tls}proceed',
+            [$this, 'tls_proceed_handler']
+        );
+        $this->addXPathHandler(
+            '{jabber:client}message',
+            [$this, 'message_handler']
+        );
+        $this->addXPathHandler(
+            '{jabber:client}presence',
+            [$this, 'presence_handler']
+        );
+        $this->addXPathHandler(
+            'iq/{jabber:iq:roster}query',
+            [$this, 'roster_iq_handler']
+        );
     }
 
     /**
@@ -326,8 +347,8 @@ class XMPP extends XMLStream
      */
     public function getVCard(?string $jid = null): void
     {
-        $id = $this->getID();
-        $this->addIdHandler($id, 'vcard_get_handler');
+        $id = $this->getId();
+        $this->addIdHandler($id, [$this, 'vcard_get_handler']);
         if ($jid) {
             $this->send("<iq type='get' id='$id' to='$jid'><vCard xmlns='vcard-temp' /></iq>");
         } else {
@@ -347,7 +368,7 @@ class XMPP extends XMLStream
             $this->send("<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required /></starttls>");
         } elseif ($xml->hasSub('bind') and $this->authed) {
             $id = $this->getId();
-            $this->addIdHandler($id, 'resource_bind_handler');
+            $this->addIdHandler($id, [$this, 'resource_bind_handler']);
             $this->send("<iq xmlns=\"jabber:client\" type=\"set\" id=\"$id\"><bind xmlns=\"urn:ietf:params:xml:ns:xmpp-bind\"><resource>{$this->resource}</resource></bind></iq>");
         } else {
             $this->log->log("Attempting Auth...");
@@ -401,7 +422,7 @@ class XMPP extends XMLStream
             $this->jid = $jidarray[0];
         }
         $id = $this->getId();
-        $this->addIdHandler($id, 'session_start_handler');
+        $this->addIdHandler($id, [$this, 'session_start_handler']);
         $this->send("<iq xmlns='jabber:client' type='set' id='$id'><session xmlns='urn:ietf:params:xml:ns:xmpp-session' /></iq>");
     }
 

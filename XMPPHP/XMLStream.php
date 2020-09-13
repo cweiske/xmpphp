@@ -374,13 +374,10 @@ class XMLStream
      */
     public function event(string $name, ?array $payload = null): void
     {
-        $this->log->log("EVENT: $name", Log::LEVEL_DEBUG);
+        $this->log->log("EVENT: {$name}", Log::LEVEL_DEBUG);
         foreach ($this->eventhandlers as $handler) {
-            if ($name == $handler[0]) {
-                if ($handler[2] === null) {
-                    $handler[2] = $this;
-                }
-                $handler[2]->{$handler[1]}($payload);
+            if ($handler[0] === $name) {
+                call_user_func_array($handler[1], [&$payload]);
             }
         }
         foreach ($this->until as $key => $until) {
@@ -505,12 +502,12 @@ class XMLStream
     /**
      * Get next ID
      *
-     * @return int
+     * @return string
      */
-    public function getId(): int
+    public function getId(): string
     {
-        $this->lastid++;
-        return $this->lastid;
+        ++$this->lastid;
+        return (string) $this->lastid;
     }
 
     /**
@@ -523,15 +520,44 @@ class XMLStream
     }
 
     /**
+     * Compose a proper callable if given legacy syntax
+     *
+     * @param callable|string $pointer
+     * @param object|null|bool $obj
+     * @return callable
+     * @throws InvalidArgumentException
+     */
+    protected function ensureHandler($pointer, $obj = false): callable
+    {
+        $handler = $pointer;
+
+        if (is_string($pointer)) {
+            if (is_object($obj)) {
+                $handler = [$obj, $pointer];
+            } elseif (is_null($obj)) {
+                // Questionable behaviour for backwards compatibility
+                $handler = [$this, $pointer];
+            }
+        }
+
+        if (!is_callable($handler)) {
+            throw new \InvalidArgumentException(
+                'Cannot compose a proper callable'
+            );
+        }
+        return $handler;
+    }
+
+    /**
      * Add ID Handler
      *
      * @param int $id
-     * @param string $pointer
-     * @param string|null $obj
+     * @param callable|string $pointer
+     * @param object|bool|null $obj
      */
-    public function addIdHandler(int $id, string $pointer, ?string $obj = null): void
+    public function addIdHandler(string $id, $pointer, $obj = null): void
     {
-        $this->idhandlers[$id] = [$pointer, $obj];
+        $this->idhandlers[$id] = [$this->ensureHandler($pointer, $obj)];
     }
 
     /**
@@ -540,23 +566,23 @@ class XMLStream
      * @param string $name
      * @param string $ns
      * @param string $pointer
-     * @param string|null $obj
+     * @param object|bool|null $obj
      * @param int $depth
      *
-     * public function addHandler(string $name, string $ns, string $pointer, ?string $obj = null, int $depth = 1): void
+     * public function addHandler(string $name, string $ns, $pointer, $obj = null, int $depth = 1): void
      * {
-     * #TODO deprication warning
-     * $this->nshandlers[] = [$name, $ns, $pointer, $obj, $depth];
+     *     // TODO deprecation warning
+     *     $this->nshandlers[] = [$name, $ns, $this->ensureHandler($pointer, $obj), $depth];
      * }*/
 
     /**
      * Add XPath Handler
      *
      * @param string $xpath
-     * @param string $pointer
-     * @param string|null $obj
+     * @param callable|string $pointer
+     * @param object|bool|null $obj
      */
-    public function addXPathHandler(string $xpath, string $pointer, ?string $obj = null): void
+    public function addXPathHandler(string $xpath, $pointer, $obj = null): void
     {
         if (preg_match_all('/\/?(\{[^\}]+\})?[^\/]+/', $xpath, $regs)) {
             $tag = $regs[0];
@@ -569,19 +595,20 @@ class XMLStream
             preg_match('/(\{([^\}]+)\})?(.*)/', $t, $regs);
             $xpath_array[] = [$regs[2], $regs[3]];
         }
-        $this->xpathhandlers[] = [$xpath_array, $pointer, $obj];
+
+        $this->xpathhandlers[] = [$xpath_array, $this->ensureHandler($pointer, $obj)];
     }
 
     /**
      * Add Event Handler
      *
      * @param string $name
-     * @param string $pointer
-     * @param object $obj
+     * @param callable|string $pointer
+     * @param object|bool|null $obj
      */
-    public function addEventHandler(string $name, string $pointer, object $obj)
+    public function addEventHandler(string $name, $pointer, $obj = null): void
     {
-        $this->eventhandlers[] = [$name, $pointer, $obj];
+        $this->eventhandlers[] = [$name, $this->ensureHandler($pointer, $obj)];
     }
 
     /**
@@ -715,12 +742,8 @@ class XMLStream
                                 break;
                             }
                         }
-                        if ($searchxml !== null) {
-                            if ($handler[2] === null) {
-                                $handler[2] = $this;
-                            }
-                            $this->log->log("Calling {$handler[1]}", Log::LEVEL_DEBUG);
-                            $handler[2]->{$handler[1]}($this->xmlobj[2]);
+                        if (!is_null($searchxml)) {
+                            call_user_func_array($handler[1], [&$this->xmlobj[2]]);
                         }
                     }
                 }
@@ -731,21 +754,25 @@ class XMLStream
                 } elseif (is_array($this->xmlobj) and array_key_exists(2, $this->xmlobj)) {
                     $searchxml = $this->xmlobj[2];
                 }
-                if ($searchxml !== null and $searchxml->name == $handler[0] and ($searchxml->ns == $handler[1] or (!$handler[1] and $searchxml->ns == $this->default_ns))) {
-                    if ($handler[3] === null) {
-                        $handler[3] = $this;
-                    }
-                    $this->log->log("Calling {$handler[2]}", Log::LEVEL_DEBUG);
-                    $handler[3]->{$handler[2]}($this->xmlobj[2]);
+                if (
+                    !is_null($searchxml)
+                    && $searchxml->name === $handler[0]
+                    && (
+                        (!$handler[1] && $searchxml->ns === $this->default_ns)
+                        || $searchxml->ns === $handler[1]
+                    )
+                ) {
+                    call_user_func_array($handler[2], [&$this->xmlobj[2]]);
                 }
             }
             foreach ($this->idhandlers as $id => $handler) {
-                if (array_key_exists('id', $this->xmlobj[2]->attrs) and $this->xmlobj[2]->attrs['id'] == $id) {
-                    if ($handler[1] === null) {
-                        $handler[1] = $this;
-                    }
-                    $handler[1]->{$handler[0]}($this->xmlobj[2]);
-                    #id handlers are only used once
+                if (
+                    array_key_exists(2, $this->xmlobj)
+                    && array_key_exists('id', $this->xmlobj[2]->attrs)
+                    && $this->xmlobj[2]->attrs['id'] === (string) $id
+                ) {
+                    call_user_func_array($handler[0], [&$this->xmlobj[2]]);
+                    // id handlers are only used once
                     unset($this->idhandlers[$id]);
                     break;
                 }
