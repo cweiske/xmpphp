@@ -158,15 +158,15 @@ class XMLObj
      * Return a sub
      *
      * @param string $name
-     * @param array|null $attrs (optional)
      * @param string|null $ns (optional)
+     * @param array|null $attrs (optional)
      * @return mixed
      */
-    public function sub(string $name, ?array $attrs = null, ?string $ns = null)
+    public function sub(string $name, ?string $ns = null, ?array $attrs = null)
     {
-        #TODO attrs is ignored
+        // @todo attrs is ignored
         foreach ($this->subs as $sub) {
-            if ($sub->name == $name and ($ns == null or $sub->ns == $ns)) {
+            if ($sub->name === $name && (is_null($ns) || $sub->ns === $ns)) {
                 return $sub;
             }
         }
